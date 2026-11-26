@@ -1,0 +1,29 @@
+id: mac_media_compact
+version: 0.1.0
+api: "0.17"
+icon: music
+maintainer: Anwar
+license: MIT
+stage: beta
+topics: [media]
+requires:
+  esphome: 2026.6.2
+  psram: true
+boards: any
+flash_kb: 12
+permissions:
+  home_assistant_actions:
+    - media_player.media_previous_track
+    - media_player.media_play_pause
+    - media_player.media_next_track
+tiles:
+  - id: compact
+    name: tile_name
+    icon: music
+    sizes: { min: 2x1, max: 2x2 }
+    memory: 1800
+    domains: [media_player]
+    attributes: [media_title, media_artist, media_album_name, app_name]
+    pictures: 1
+    example: tile_example
+    preview: { title: "{media_title}", value: "{media_artist}" }
