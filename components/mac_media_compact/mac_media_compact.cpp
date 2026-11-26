@@ -16,6 +16,41 @@ std::string cover_address(const std::string &entity, JsonObjectConst data) {
   return "cover:" + entity;
 }
 
+// An extra one-pixel place under the visible cover gives each track a fresh
+// atlas key. Tessera currently offers no public picture revision parameter.
+class CoverRevision {
+ public:
+  void create(lv_obj_t *parent, int x, int y) {
+    marker_ = ui::picture(parent);
+    lv_obj_set_size(marker_, 1, 1);
+    lv_obj_set_pos(marker_, x, y);
+  }
+
+  void update(const std::string &entity, JsonObjectConst data) {
+    if (!marker_ || entity.empty()) return;
+    JsonObjectConst a = data["attributes"];
+    std::string next = std::string(a["media_content_id"] | "") + "\n" +
+                       std::string(a["media_title"] | "") + "\n" +
+                       std::string(a["media_artist"] | "") + "\n" +
+                       std::string(a["media_album_name"] | "") + "\n" +
+                       std::string(a["entity_picture"] | "") + "\n" +
+                       std::string(a["entity_picture_local"] | "");
+    if (!initialized_ || next != signature_) {
+      initialized_ = true;
+      signature_ = next;
+      revision_ = revision_ % 30000 + 1;
+      lv_obj_set_style_radius(marker_, revision_, 0);
+    }
+    ui::set_picture(marker_, cover_address(entity, data), tessera::Fit::COVER);
+  }
+
+ private:
+  lv_obj_t *marker_ = nullptr;
+  std::string signature_;
+  int revision_ = 0;
+  bool initialized_ = false;
+};
+
 void set_playback_action(const std::string &entity, int x, int width, int tap_x) {
   if (entity.empty() || width <= 0) return;
   const int segment = std::max(0, std::min(2, (tap_x - x) * 3 / width));
@@ -55,9 +90,10 @@ class CompactTile : public tessera::Tile {
     controls_y_ = group_y + source_h + title_h + artist_h + ui::px(10);
 
     if (ui::pictures()) {
+      cover_y_ = (h - cover_side_) / 2;
+      revision_.create(c.parent, inset, cover_y_);
       cover_ = ui::picture(c.parent);
       lv_obj_set_size(cover_, cover_side_, cover_side_);
-      cover_y_ = (h - cover_side_) / 2;
       lv_obj_set_pos(cover_, inset, cover_y_);
     }
 
@@ -95,6 +131,7 @@ class CompactTile : public tessera::Tile {
     ui::set_text(title_, title);
     ui::set_text(artist_, artist);
     set_playback_text(keys_, playing_);
+    revision_.update(entity_, data);
     if (cover_ && !entity_.empty())
       ui::set_picture(cover_, cover_address(entity_, data), tessera::Fit::COVER);
   }
@@ -119,6 +156,7 @@ class CompactTile : public tessera::Tile {
 
  private:
   const tessera::Plugin *plugin_;
+  CoverRevision revision_;
   std::string entity_;
   lv_obj_t *cover_ = nullptr, *source_ = nullptr, *title_ = nullptr, *artist_ = nullptr, *keys_ = nullptr;
   int cover_side_ = 0, cover_y_ = 0, right_x_ = 0, right_w_ = 1, controls_y_ = 0, tile_ = -1;
@@ -138,6 +176,7 @@ class CoverCard : public tessera::Card {
     const int text_h = title_h + artist_h + controls_h + ui::px(16);
     cover_side_ = std::max(48, std::min(width_ - 2 * inset, height_ - text_h - 2 * inset));
     const int cover_x = std::max(0, (width_ - cover_side_) / 2);
+    revision_.create(c.parent, cover_x, inset);
     cover_ = ui::picture(c.parent);
     lv_obj_set_size(cover_, cover_side_, cover_side_);
     lv_obj_set_pos(cover_, cover_x, inset);
@@ -167,6 +206,7 @@ class CoverCard : public tessera::Card {
     ui::set_text(title_, title.empty() ? (state == "unavailable" ? "Lecteur indisponible" : "Aucune lecture") : title);
     ui::set_text(artist_, artist);
     set_playback_text(keys_, state == "playing");
+    revision_.update(entity_, data);
     if (cover_ && !entity_.empty()) ui::set_picture(cover_, cover_address(entity_, data), tessera::Fit::COVER);
   }
 
@@ -184,6 +224,7 @@ class CoverCard : public tessera::Card {
   }
 
  private:
+  CoverRevision revision_;
   std::string entity_;
   lv_obj_t *cover_ = nullptr, *title_ = nullptr, *artist_ = nullptr, *keys_ = nullptr;
   int width_ = 0, height_ = 0, cover_side_ = 0, controls_y_ = 0;

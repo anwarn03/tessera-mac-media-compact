@@ -1,3 +1,6 @@
+## 0.2.2
+- Essai de rafraîchissement des pochettes lors d'un changement de piste, dans la tuile et la vue agrandie.
+
 ## 0.2.1
 - Corrige l'adresse de pochette refusée par Tessera dans la version 0.2.0.
 

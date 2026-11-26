@@ -1,5 +1,5 @@
 id: mac_media_compact
-version: 0.2.1
+version: 0.2.2
 api: "0.17"
 icon: music
 maintainer: Anwar
@@ -24,10 +24,10 @@ tiles:
     memory: 1800
     domains: [media_player]
     attributes: [media_title, media_artist, media_album_name, media_content_id, entity_picture, entity_picture_local, app_name]
-    pictures: 1
+    pictures: 2
     example: tile_example
     preview: { title: "{media_title}", value: "{media_artist}" }
 cards:
   - id: cover
     name: cover_card
-    pictures: 1
+    pictures: 2
