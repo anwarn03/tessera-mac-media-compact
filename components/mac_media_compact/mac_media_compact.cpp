@@ -10,25 +10,10 @@ using tessera::Font;
 
 namespace {
 
-// `cover:<entity>` is resolved by Tessera through Home Assistant's media proxy.
-// The query is deliberately only a cache key: Tessera strips it before resolving
-// the entity, but sees a different picture address when the track changes.
+// Tessera accepts `cover:<entity>` without query parameters.
 std::string cover_address(const std::string &entity, JsonObjectConst data) {
-  const JsonObjectConst attrs = data["attributes"];
-  std::string fingerprint = attrs["media_content_id"] | "";
-  fingerprint += "\n" + std::string(attrs["media_title"] | "");
-  fingerprint += "\n" + std::string(attrs["media_artist"] | "");
-  fingerprint += "\n" + std::string(attrs["media_album_name"] | "");
-  fingerprint += "\n" + std::string(attrs["entity_picture_local"] | "");
-  fingerprint += "\n" + std::string(attrs["entity_picture"] | "");
-  uint32_t hash = 2166136261u;
-  for (unsigned char c : fingerprint) {
-    hash ^= c;
-    hash *= 16777619u;
-  }
-  char key[9];
-  snprintf(key, sizeof(key), "%08lx", static_cast<unsigned long>(hash));
-  return "cover:" + entity + "?track=" + key;
+  (void) data;
+  return "cover:" + entity;
 }
 
 void set_playback_action(const std::string &entity, int x, int width, int tap_x) {

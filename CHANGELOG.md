@@ -1,3 +1,6 @@
+## 0.2.1
+- Corrige l'adresse de pochette refusée par Tessera dans la version 0.2.0.
+
 ## 0.2.0
 - Centre la composition de la tuile 2×1, avec une pochette carrée et un bloc d'informations cohérent.
 - Redemande la pochette à chaque changement de morceau ; le cache côté Tessera peut encore garder une image dont l'adresse ne change pas.
