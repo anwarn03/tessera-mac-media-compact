@@ -1,3 +1,8 @@
+## 0.2.0
+- Centre la composition de la tuile 2×1, avec une pochette carrée et un bloc d'informations cohérent.
+- Redemande la pochette à chaque changement de morceau ; le cache côté Tessera peut encore garder une image dont l'adresse ne change pas.
+- Ajoute une vue de pochette agrandie au toucher, fermée par le bouton Retour standard de Tessera.
+
 ## 0.1.0
 - Première version expérimentale pour les lecteurs `media_player` de Home Assistant.
 - Pochette carrée, titre, artiste et commandes précédent / pause / suivant.

@@ -5,6 +5,7 @@
     "name": "Mac Media Compact",
     "summary": "A clean compact music player for your Home Assistant media players.",
     "tile_name": "Compact media player",
-    "tile_example": "Artwork, song title and playback controls"
+    "tile_example": "Artwork, song title and playback controls",
+    "cover_card": "Now playing"
   }
 }

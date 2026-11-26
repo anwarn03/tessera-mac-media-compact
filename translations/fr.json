@@ -5,6 +5,7 @@
     "name": "Mac Media Compact",
     "summary": "Lecteur multimédia compact pour Home Assistant.",
     "tile_name": "Lecteur compact",
-    "tile_example": "Pochette, morceau et commandes de lecture"
+    "tile_example": "Pochette, morceau et commandes de lecture",
+    "cover_card": "Lecture en cours"
   }
 }
