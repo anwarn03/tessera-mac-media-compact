@@ -28,6 +28,7 @@ class CoverRevision {
 
   void update(const std::string &entity, JsonObjectConst data) {
     if (!marker_ || entity.empty()) return;
+    lv_obj_remove_flag(marker_, LV_OBJ_FLAG_HIDDEN);
     JsonObjectConst a = data["attributes"];
     std::string next = std::string(a["media_content_id"] | "") + "\n" +
                        std::string(a["media_title"] | "") + "\n" +
@@ -42,6 +43,14 @@ class CoverRevision {
       lv_obj_set_style_radius(marker_, revision_, 0);
     }
     ui::set_picture(marker_, cover_address(entity, data), tessera::Fit::COVER);
+  }
+
+  void clear() {
+    if (marker_) {
+      ui::set_picture(marker_, "");
+      lv_obj_add_flag(marker_, LV_OBJ_FLAG_HIDDEN);
+    }
+    initialized_ = false;
   }
 
  private:
@@ -120,6 +129,13 @@ class CompactTile : public tessera::Tile {
 
   void on_state(JsonObjectConst data) override {
     std::string state = data["state"] | "";
+    active_ = state == "playing" || state == "paused";
+    if (!active_) {
+      for (lv_obj_t *p : {source_, title_, artist_, keys_}) ui::set_text(p, "");
+      revision_.clear();
+      if (cover_) { ui::set_picture(cover_, ""); lv_obj_add_flag(cover_, LV_OBJ_FLAG_HIDDEN); }
+      return;
+    }
     playing_ = state == "playing";
     std::string name = data["name"] | "MacBook Air";
     std::string title = data["attributes"]["media_title"] | "";
@@ -132,8 +148,10 @@ class CompactTile : public tessera::Tile {
     ui::set_text(artist_, artist);
     set_playback_text(keys_, playing_);
     revision_.update(entity_, data);
-    if (cover_ && !entity_.empty())
+    if (cover_ && !entity_.empty()) {
+      lv_obj_remove_flag(cover_, LV_OBJ_FLAG_HIDDEN);
       ui::set_picture(cover_, cover_address(entity_, data), tessera::Fit::COVER);
+    }
   }
 
   void on_theme() override {
@@ -144,7 +162,7 @@ class CompactTile : public tessera::Tile {
   }
 
   void on_tap() override {
-    if (entity_.empty()) return;
+    if (entity_.empty() || !active_) return;
     const tessera::Point p = tessera::tap_point();
     if (p.x >= ui::px(8) && p.x < ui::px(8) + cover_side_ && p.y >= cover_y_ && p.y < cover_y_ + cover_side_) {
       tessera::open_card(plugin_->plugin_id(), "cover", entity_, tile_, "Lecture en cours");
@@ -161,6 +179,7 @@ class CompactTile : public tessera::Tile {
   lv_obj_t *cover_ = nullptr, *source_ = nullptr, *title_ = nullptr, *artist_ = nullptr, *keys_ = nullptr;
   int cover_side_ = 0, cover_y_ = 0, right_x_ = 0, right_w_ = 1, controls_y_ = 0, tile_ = -1;
   bool playing_ = false;
+  bool active_ = false;
 };
 
 class CoverCard : public tessera::Card {
@@ -201,13 +220,23 @@ class CoverCard : public tessera::Card {
 
   void on_state(JsonObjectConst data) override {
     const std::string state = data["state"] | "";
+    active_ = state == "playing" || state == "paused";
+    if (!active_) {
+      for (lv_obj_t *p : {title_, artist_, keys_}) ui::set_text(p, "");
+      revision_.clear();
+      if (cover_) { ui::set_picture(cover_, ""); lv_obj_add_flag(cover_, LV_OBJ_FLAG_HIDDEN); }
+      return;
+    }
     const std::string title = data["attributes"]["media_title"] | "";
     const std::string artist = data["attributes"]["media_artist"] | "";
     ui::set_text(title_, title.empty() ? (state == "unavailable" ? "Lecteur indisponible" : "Aucune lecture") : title);
     ui::set_text(artist_, artist);
     set_playback_text(keys_, state == "playing");
     revision_.update(entity_, data);
-    if (cover_ && !entity_.empty()) ui::set_picture(cover_, cover_address(entity_, data), tessera::Fit::COVER);
+    if (cover_ && !entity_.empty()) {
+      lv_obj_remove_flag(cover_, LV_OBJ_FLAG_HIDDEN);
+      ui::set_picture(cover_, cover_address(entity_, data), tessera::Fit::COVER);
+    }
   }
 
   void on_theme() override {
@@ -217,6 +246,7 @@ class CoverCard : public tessera::Card {
   }
 
   void on_tap() override {
+    if (!active_) return;
     const tessera::Point p = tessera::tap_point();
     const int inset = ui::px(12);
     if (p.x >= inset && p.x < width_ - inset && p.y >= controls_y_ - ui::px(8))
@@ -228,6 +258,7 @@ class CoverCard : public tessera::Card {
   std::string entity_;
   lv_obj_t *cover_ = nullptr, *title_ = nullptr, *artist_ = nullptr, *keys_ = nullptr;
   int width_ = 0, height_ = 0, cover_side_ = 0, controls_y_ = 0;
+  bool active_ = false;
 };
 
 void MacMediaCompact::setup() {

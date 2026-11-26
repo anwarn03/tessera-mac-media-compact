@@ -1,3 +1,6 @@
+## 0.2.3
+- Vide la tuile et la vue agrandie quand le lecteur n'est ni en lecture ni en pause.
+
 ## 0.2.2
 - Essai de rafraîchissement des pochettes lors d'un changement de piste, dans la tuile et la vue agrandie.
 
