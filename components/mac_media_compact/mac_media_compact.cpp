@@ -39,8 +39,9 @@ class CoverRevision {
     if (!initialized_ || next != signature_) {
       initialized_ = true;
       signature_ = next;
-      revision_ = revision_ % 30000 + 1;
-      lv_obj_set_style_radius(marker_, revision_, 0);
+      bump();
+      ticks_ = 0;
+      retry_ = true;
     }
     ui::set_picture(marker_, cover_address(entity, data), tessera::Fit::COVER);
   }
@@ -51,13 +52,27 @@ class CoverRevision {
       lv_obj_add_flag(marker_, LV_OBJ_FLAG_HIDDEN);
     }
     initialized_ = false;
+    retry_ = false;
+  }
+
+  // Metadata can reach Home Assistant before the new cover. Ask again after
+  // a short delay, even if its long picture URL was truncated in plugin state.
+  void tick() {
+    if (!marker_ || !retry_) return;
+    ++ticks_;
+    if (ticks_ == 3 || ticks_ == 8) bump();
+    if (ticks_ >= 8) retry_ = false;
   }
 
  private:
+  void bump() {
+    revision_ = revision_ % 30000 + 1;
+    lv_obj_set_style_radius(marker_, revision_, 0);
+  }
   lv_obj_t *marker_ = nullptr;
   std::string signature_;
-  int revision_ = 0;
-  bool initialized_ = false;
+  int revision_ = 0, ticks_ = 0;
+  bool initialized_ = false, retry_ = false;
 };
 
 void set_playback_action(const std::string &entity, int x, int width, int tap_x) {
@@ -70,9 +85,27 @@ void set_playback_action(const std::string &entity, int x, int width, int tap_x)
   }
 }
 
-void set_playback_text(lv_obj_t *label, bool playing) {
-  ui::set_text(label, playing ? "<       II       >" : "<       >       >");
-}
+class PlaybackKeys {
+ public:
+  void create(lv_obj_t *parent, int x, int y, int width) {
+    for (int i = 0; i < 3; ++i) {
+      labels_[i] = ui::label(parent, Font::ICON_SMALL, theme::INK);
+      const int left = width * i / 3, right = width * (i + 1) / 3;
+      lv_obj_set_pos(labels_[i], x + left, y);
+      lv_obj_set_size(labels_[i], right - left, ui::line_height(Font::ICON_SMALL));
+      lv_obj_set_style_text_align(labels_[i], LV_TEXT_ALIGN_CENTER, 0);
+    }
+  }
+  void show(bool playing) {
+    ui::set_text(labels_[0], ui::icon(0xF04AE));
+    ui::set_text(labels_[1], ui::icon(playing ? 0xF03E4 : 0xF040A));
+    ui::set_text(labels_[2], ui::icon(0xF04AD));
+  }
+  void clear() { for (auto *label : labels_) ui::set_text(label, ""); }
+  void theme() { for (auto *label : labels_) ui::set_color(label, theme::INK); }
+ private:
+  lv_obj_t *labels_[3] = {};
+};
 
 }  // namespace
 
@@ -93,7 +126,7 @@ class CompactTile : public tessera::Tile {
     const int source_h = ui::line_height(Font::BODY);
     const int title_h = ui::line_height(Font::TITLE);
     const int artist_h = ui::line_height(Font::BODY);
-    const int keys_h = ui::line_height(Font::BODY_LARGE);
+    const int keys_h = ui::line_height(Font::ICON_SMALL);
     const int group_h = source_h + title_h + artist_h + keys_h + ui::px(10);
     const int group_y = std::max(0, (h - group_h) / 2);
     controls_y_ = group_y + source_h + title_h + artist_h + ui::px(10);
@@ -109,8 +142,7 @@ class CompactTile : public tessera::Tile {
     source_ = ui::label(c.parent, Font::BODY, theme::MUTED);
     title_ = ui::label(c.parent, Font::TITLE, theme::INK);
     artist_ = ui::label(c.parent, Font::BODY, theme::MUTED);
-    keys_ = ui::label(c.parent, Font::BODY_LARGE, theme::INK);
-    for (lv_obj_t *p : {source_, title_, artist_, keys_}) {
+    for (lv_obj_t *p : {source_, title_, artist_}) {
       lv_obj_set_width(p, right_w_);
       lv_obj_set_style_text_align(p, LV_TEXT_ALIGN_CENTER, 0);
     }
@@ -122,16 +154,15 @@ class CompactTile : public tessera::Tile {
     lv_obj_set_pos(artist_, right_x_, group_y + source_h + title_h);
     lv_obj_set_height(artist_, artist_h);
     lv_label_set_long_mode(artist_, LV_LABEL_LONG_DOT);
-    lv_obj_set_pos(keys_, right_x_, controls_y_);
-    lv_obj_set_height(keys_, keys_h);
-    set_playback_text(keys_, false);
+    keys_.create(c.parent, right_x_, controls_y_, right_w_);
   }
 
   void on_state(JsonObjectConst data) override {
     std::string state = data["state"] | "";
     active_ = state == "playing" || state == "paused";
     if (!active_) {
-      for (lv_obj_t *p : {source_, title_, artist_, keys_}) ui::set_text(p, "");
+      for (lv_obj_t *p : {source_, title_, artist_}) ui::set_text(p, "");
+      keys_.clear();
       revision_.clear();
       if (cover_) { ui::set_picture(cover_, ""); lv_obj_add_flag(cover_, LV_OBJ_FLAG_HIDDEN); }
       return;
@@ -146,7 +177,7 @@ class CompactTile : public tessera::Tile {
     ui::set_text(source_, app);
     ui::set_text(title_, title);
     ui::set_text(artist_, artist);
-    set_playback_text(keys_, playing_);
+    keys_.show(playing_);
     revision_.update(entity_, data);
     if (cover_ && !entity_.empty()) {
       lv_obj_remove_flag(cover_, LV_OBJ_FLAG_HIDDEN);
@@ -158,8 +189,10 @@ class CompactTile : public tessera::Tile {
     ui::set_color(source_, theme::MUTED);
     ui::set_color(title_, theme::INK);
     ui::set_color(artist_, theme::MUTED);
-    ui::set_color(keys_, theme::INK);
+    keys_.theme();
   }
+
+  void on_tick(uint32_t) override { if (active_) revision_.tick(); }
 
   void on_tap() override {
     if (entity_.empty() || !active_) return;
@@ -175,8 +208,9 @@ class CompactTile : public tessera::Tile {
  private:
   const tessera::Plugin *plugin_;
   CoverRevision revision_;
+  PlaybackKeys keys_;
   std::string entity_;
-  lv_obj_t *cover_ = nullptr, *source_ = nullptr, *title_ = nullptr, *artist_ = nullptr, *keys_ = nullptr;
+  lv_obj_t *cover_ = nullptr, *source_ = nullptr, *title_ = nullptr, *artist_ = nullptr;
   int cover_side_ = 0, cover_y_ = 0, right_x_ = 0, right_w_ = 1, controls_y_ = 0, tile_ = -1;
   bool playing_ = false;
   bool active_ = false;
@@ -189,7 +223,7 @@ class CoverCard : public tessera::Card {
     width_ = c.width;
     height_ = c.height;
     const int inset = ui::px(12);
-    const int controls_h = ui::line_height(Font::BODY_LARGE);
+    const int controls_h = ui::line_height(Font::ICON_SMALL);
     const int title_h = ui::line_height(Font::TITLE);
     const int artist_h = ui::line_height(Font::BODY);
     const int text_h = title_h + artist_h + controls_h + ui::px(16);
@@ -201,9 +235,8 @@ class CoverCard : public tessera::Card {
     lv_obj_set_pos(cover_, cover_x, inset);
     title_ = ui::label(c.parent, Font::TITLE, theme::INK);
     artist_ = ui::label(c.parent, Font::BODY, theme::MUTED);
-    keys_ = ui::label(c.parent, Font::BODY_LARGE, theme::INK);
     controls_y_ = inset + cover_side_ + ui::px(8) + title_h + artist_h + ui::px(8);
-    for (lv_obj_t *p : {title_, artist_, keys_}) {
+    for (lv_obj_t *p : {title_, artist_}) {
       lv_obj_set_width(p, std::max(1, width_ - 2 * inset));
       lv_obj_set_style_text_align(p, LV_TEXT_ALIGN_CENTER, 0);
     }
@@ -213,16 +246,15 @@ class CoverCard : public tessera::Card {
     lv_obj_set_pos(artist_, inset, inset + cover_side_ + ui::px(8) + title_h);
     lv_obj_set_height(artist_, artist_h);
     lv_label_set_long_mode(artist_, LV_LABEL_LONG_DOT);
-    lv_obj_set_pos(keys_, inset, controls_y_);
-    lv_obj_set_height(keys_, controls_h);
-    set_playback_text(keys_, false);
+    keys_.create(c.parent, inset, controls_y_, width_ - 2 * inset);
   }
 
   void on_state(JsonObjectConst data) override {
     const std::string state = data["state"] | "";
     active_ = state == "playing" || state == "paused";
     if (!active_) {
-      for (lv_obj_t *p : {title_, artist_, keys_}) ui::set_text(p, "");
+      for (lv_obj_t *p : {title_, artist_}) ui::set_text(p, "");
+      keys_.clear();
       revision_.clear();
       if (cover_) { ui::set_picture(cover_, ""); lv_obj_add_flag(cover_, LV_OBJ_FLAG_HIDDEN); }
       return;
@@ -231,7 +263,7 @@ class CoverCard : public tessera::Card {
     const std::string artist = data["attributes"]["media_artist"] | "";
     ui::set_text(title_, title.empty() ? (state == "unavailable" ? "Lecteur indisponible" : "Aucune lecture") : title);
     ui::set_text(artist_, artist);
-    set_playback_text(keys_, state == "playing");
+    keys_.show(state == "playing");
     revision_.update(entity_, data);
     if (cover_ && !entity_.empty()) {
       lv_obj_remove_flag(cover_, LV_OBJ_FLAG_HIDDEN);
@@ -242,8 +274,10 @@ class CoverCard : public tessera::Card {
   void on_theme() override {
     ui::set_color(title_, theme::INK);
     ui::set_color(artist_, theme::MUTED);
-    ui::set_color(keys_, theme::INK);
+    keys_.theme();
   }
+
+  void on_tick(uint32_t) override { if (active_) revision_.tick(); }
 
   void on_tap() override {
     if (!active_) return;
@@ -255,8 +289,9 @@ class CoverCard : public tessera::Card {
 
  private:
   CoverRevision revision_;
+  PlaybackKeys keys_;
   std::string entity_;
-  lv_obj_t *cover_ = nullptr, *title_ = nullptr, *artist_ = nullptr, *keys_ = nullptr;
+  lv_obj_t *cover_ = nullptr, *title_ = nullptr, *artist_ = nullptr;
   int width_ = 0, height_ = 0, cover_side_ = 0, controls_y_ = 0;
   bool active_ = false;
 };

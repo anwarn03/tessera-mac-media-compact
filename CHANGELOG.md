@@ -1,3 +1,7 @@
+## 0.2.4
+- Réessaie la pochette après quelques secondes lorsque l'image arrive après les métadonnées.
+- Sépare les icônes de lecture et aligne chacune avec sa zone tactile dans les deux vues.
+
 ## 0.2.3
 - Vide la tuile et la vue agrandie quand le lecteur n'est ni en lecture ni en pause.
 

@@ -1,4 +1,4 @@
-# Mac Media Compact — Tessera 0.2.3
+# Mac Media Compact — Tessera 0.2.4
 
 Tuile expérimentale pour Tessera Screen Manager et un lecteur `media_player` Home Assistant, notamment MacMediaPlayer.
 
@@ -23,7 +23,7 @@ Après installation : Tessera → Bureau → Layout → Plugins → Mac Media Co
 3. Lance deux morceaux différents. La pochette doit changer avec le titre ; touche-la pour ouvrir l'affichage agrandi, puis utilise le bouton Retour en haut à gauche.
 
 ## Diagnostic de la pochette
-La tuile utilise la source Tessera `cover:<entité>`, qui récupère l'image via Home Assistant. La version 0.2.2 essaie de demander une nouvelle image quand la piste ou l'adresse de la pochette change. Cette méthode expérimentale utilise un détail interne de Tessera et doit être testée sur l'écran. Si l'adresse de l'image Home Assistant reste identique, le cache de Tessera Screen Manager peut encore conserver l'ancienne image.
+La tuile utilise la source Tessera `cover:<entité>`, qui récupère l'image via Home Assistant. Depuis la version 0.2.4, la tuile redemande aussi l'image quelques secondes après un changement, car les informations et la pochette peuvent arriver à des moments différents. Cette méthode expérimentale utilise un détail interne de Tessera et doit être testée sur l'écran. Si l'adresse de l'image Home Assistant reste identique, le cache de Tessera Screen Manager peut encore conserver l'ancienne image.
 
 ## État de validation
 Manifeste et traductions vérifiés ; compilation du firmware et essai sur le GUITION encore nécessaires.
