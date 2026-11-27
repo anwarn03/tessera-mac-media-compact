@@ -1,3 +1,6 @@
+## 0.2.5
+- Ouvre la vue agrandie en touchant la tuile hors commandes.
+
 ## 0.2.4
 - Réessaie la pochette après quelques secondes lorsque l'image arrive après les métadonnées.
 - Sépare les icônes de lecture et aligne chacune avec sa zone tactile dans les deux vues.

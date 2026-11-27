@@ -1,11 +1,11 @@
-# Mac Media Compact — Tessera 0.2.4
+# Mac Media Compact — Tessera 0.2.5
 
 Tuile expérimentale pour Tessera Screen Manager et un lecteur `media_player` Home Assistant, notamment MacMediaPlayer.
 
 ## Fonctions
 - Pochette carrée à gauche, titre, artiste et commandes centrés dans la partie droite de la tuile 2×1.
 - La pochette provient de Home Assistant via Tessera. Son rafraîchissement dépend du cache de Tessera et de l'adresse d'image fournie par Home Assistant.
-- Un toucher sur la pochette ouvre une vue agrandie ; le bouton Retour de Tessera revient immédiatement au tableau de bord.
+- Un toucher sur la tuile, hors commandes, ouvre une vue agrandie ; le bouton Retour de Tessera revient au tableau de bord.
 - Lorsqu'il n'y a aucune lecture, le contenu de la tuile est vide. Une piste en pause reste affichée.
 - Pas de barre de volume ni de pochette étirée en arrière-plan.
 - Commandes prévues : piste précédente, lecture/pause, piste suivante.

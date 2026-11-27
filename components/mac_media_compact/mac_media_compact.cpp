@@ -118,6 +118,8 @@ class CompactTile : public tessera::Tile {
     tile_ = c.tile;
     const int w = c.width;
     const int h = c.height;
+    width_ = w;
+    height_ = h;
     const int inset = ui::px(8);
     const int gap = ui::px(10);
     cover_side_ = std::max(32, std::min(h - 2 * inset, (w - 2 * inset - gap) * 2 / 5));
@@ -197,12 +199,12 @@ class CompactTile : public tessera::Tile {
   void on_tap() override {
     if (entity_.empty() || !active_) return;
     const tessera::Point p = tessera::tap_point();
-    if (p.x >= ui::px(8) && p.x < ui::px(8) + cover_side_ && p.y >= cover_y_ && p.y < cover_y_ + cover_side_) {
-      tessera::open_card(plugin_->plugin_id(), "cover", entity_, tile_, "Lecture en cours");
+    if (p.x < 0 || p.y < 0 || p.x >= width_ || p.y >= height_) return;
+    if (p.x >= right_x_ && p.x < right_x_ + right_w_ && p.y >= controls_y_ - ui::px(8)) {
+      set_playback_action(entity_, right_x_, right_w_, p.x);
       return;
     }
-    if (p.x >= right_x_ && p.x < right_x_ + right_w_ && p.y >= controls_y_ - ui::px(8))
-      set_playback_action(entity_, right_x_, right_w_, p.x);
+    tessera::open_card(plugin_->plugin_id(), "cover", entity_, tile_, "Lecture en cours");
   }
 
  private:
@@ -211,7 +213,7 @@ class CompactTile : public tessera::Tile {
   PlaybackKeys keys_;
   std::string entity_;
   lv_obj_t *cover_ = nullptr, *source_ = nullptr, *title_ = nullptr, *artist_ = nullptr;
-  int cover_side_ = 0, cover_y_ = 0, right_x_ = 0, right_w_ = 1, controls_y_ = 0, tile_ = -1;
+  int cover_side_ = 0, cover_y_ = 0, right_x_ = 0, right_w_ = 1, controls_y_ = 0, tile_ = -1, width_ = 0, height_ = 0;
   bool playing_ = false;
   bool active_ = false;
 };
